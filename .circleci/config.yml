@@ -16,8 +16,37 @@ localCheckout: &localCheckout
     cp -a /tmp/_circleci_local_build_repo/.git ${PROJECT_PATH}
 
 jobs:
+  ubuntu_x64_xbuild:
+    description: Building and pushing OQS performance testing multiarch Docker image that depend on OQS-OpenSSL
+    docker:
+      - image: cimg/base:stable
+#      - image: openquantumsafe/ci-ubuntu-focal-x86_64:latest
+#        auth:
+#          username: $DOCKER_LOGIN
+#          password: $DOCKER_PASSWORD
+    steps:
+      - checkout # change this from "checkout" to "*localCheckout" when running CircleCI locally
+      - setup_remote_docker:
+          version: 19.03.14
+#      - run:
+#          name: Authenticate to Docker
+#          command: echo $DOCKER_PASSWORD | docker login --username $DOCKER_LOGIN --password-stdin
+#      - run:
+#          name: Activate buildx
+#          command: |
+#                ssh remote-docker \<<EOF
+#                sudo bash -c 'echo "{\"experimental\": true}" > /etc/docker/daemon.json'
+#                sudo systemctl restart docker
+#                sudo docker info
+#                EOF
+      - run:
+          name: Test buildx
+          command: |
+              export DOCKER_CLI_EXPERIMENTAL=enabled 
+              docker buildx ls
+
   ubuntu_x64_openssl:
-    description: A template for building and pushing OQS performance testing Docker image on Ubuntu Bionic that depend on OQS-OpenSSL
+    description: Building and pushing OQS performance testing Docker image on Ubuntu that depend on OQS-OpenSSL
     docker:
       - image: openquantumsafe/ci-ubuntu-focal-x86_64:latest
         auth:
@@ -53,5 +82,8 @@ workflows:
   version: 2.1
   build:
     jobs:
-      - ubuntu_x64_openssl:
+      #- ubuntu_x64_openssl:
+      #    context: openquantumsafe
+      - ubuntu_x64_xbuild:
           context: openquantumsafe
+
