@@ -16,34 +16,35 @@ localCheckout: &localCheckout
     cp -a /tmp/_circleci_local_build_repo/.git ${PROJECT_PATH}
 
 jobs:
-  ubuntu_x64_xbuild:
-    description: Building and pushing OQS performance testing multiarch Docker image that depend on OQS-OpenSSL
-    docker:
-      - image: cimg/base:stable
-#      - image: openquantumsafe/ci-ubuntu-focal-x86_64:latest
-#        auth:
-#          username: $DOCKER_LOGIN
-#          password: $DOCKER_PASSWORD
+  arm_build:
+    description: Building and pushing OQS ARM64 benchmarking image
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: arm.medium
     steps:
       - checkout # change this from "checkout" to "*localCheckout" when running CircleCI locally
-      - setup_remote_docker:
-          version: 19.03.14
-#      - run:
-#          name: Authenticate to Docker
-#          command: echo $DOCKER_PASSWORD | docker login --username $DOCKER_LOGIN --password-stdin
-#      - run:
-#          name: Activate buildx
-#          command: |
-#                ssh remote-docker \<<EOF
-#                sudo bash -c 'echo "{\"experimental\": true}" > /etc/docker/daemon.json'
-#                sudo systemctl restart docker
-#                sudo docker info
-#                EOF
+      - run: uname -a
+      - setup_remote_docker
       - run:
-          name: Test buildx
+          name: Authenticate to Docker
+          command: echo $DOCKER_PASSWORD | docker login --username $DOCKER_LOGIN --password-stdin
+      - run:
+          name: Build and test profiling image
           command: |
-              export DOCKER_CLI_EXPERIMENTAL=enabled 
-              docker buildx ls
+            docker build --build-arg -t oqs-perf . &&
+            docker run -it oqs-perf /opt/test/selftest.sh
+          working_directory: perf
+      - when:
+          condition:
+            or:
+              - equal: [ main, << pipeline.git.branch >> ]
+              - equal: [ true, << pipeline.parameters.new_openssl_commit >> ]
+          steps:
+            - run:
+                name: Push all images
+                command: |
+                  docker tag oqs-perf $TARGETNAME/oqs-perf:arm64 &&
+                  docker push $TARGETNAME/oqs-perf:arm64
 
   ubuntu_x64_openssl:
     description: Building and pushing OQS performance testing Docker image on Ubuntu that depend on OQS-OpenSSL
@@ -84,6 +85,6 @@ workflows:
     jobs:
       #- ubuntu_x64_openssl:
       #    context: openquantumsafe
-      - ubuntu_x64_xbuild:
+      - arm_build:
           context: openquantumsafe
 
