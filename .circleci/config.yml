@@ -56,14 +56,16 @@ jobs:
       - when:
           condition:
             or:
+              # just to test:
+              - equal: [ mb-xbuild, << pipeline.git.branch >> ]
               - equal: [ main, << pipeline.git.branch >> ]
               - equal: [ true, << pipeline.parameters.new_openssl_commit >> ]
           steps:
             - run:
                 name: Push all images
                 command: |
-                  docker tag oqs-perf $TARGETNAME/oqs-perf:arm64 &&
-                  docker push $TARGETNAME/oqs-perf:arm64
+                  docker tag oqs-multiperf $TARGETNAME/oqs-multiperf &&
+                  docker push $TARGETNAME/oqs-multiperf
 
   ubuntu_x64_openssl:
     description: Building and pushing OQS performance testing Docker image on Ubuntu that depend on OQS-OpenSSL
