@@ -20,19 +20,38 @@ jobs:
     description: Building and pushing OQS ARM64 benchmarking image
     machine:
       image: ubuntu-2004:202101-01
-    resource_class: arm.medium
+#    resource_class: arm.medium
     steps:
+      - run:
+          name: Setup buildx and qemu
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y qemu-user-static
+            sudo apt-get install -y binfmt-support
+      - run:
+          name: Check versions
+          command: |
+            qemu-aarch64-static --version
+            update-binfmts --version 
+      - run:
+          name: Create builder
+          command: |
+            export DOCKER_CLI_EXPERIMENTAL=enabled
+            docker buildx create --name arm-builder
+            docker buildx use arm-builder
+            docker buildx inspect --bootstrap
+            docker buildx ls
       - checkout # change this from "checkout" to "*localCheckout" when running CircleCI locally
       - run: uname -a
-      - setup_remote_docker
+#      - setup_remote_docker
       - run:
           name: Authenticate to Docker
           command: echo $DOCKER_PASSWORD | docker login --username $DOCKER_LOGIN --password-stdin
       - run:
           name: Build and test profiling image
           command: |
-            docker build --build-arg -t oqs-perf . &&
-            docker run -it oqs-perf /opt/test/selftest.sh
+            docker buildx build -t oqs-multiperf --platform=linux/arm64,linux/amd64 .
+            docker run -it oqs-multiperf /opt/test/selftest.sh
           working_directory: perf
       - when:
           condition:
